@@ -1,8 +1,0 @@
----
-- name: Teste de ping
-  hosts: lab
-  gather_facts: false
-  
-  tasks:
-    - name: Verifica o host reponde ping Ansible
-      ansible.builtin.ping:
