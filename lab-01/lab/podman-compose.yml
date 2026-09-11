@@ -1,12 +1,18 @@
 services:
   node1:
-    build: .
+    image: localhost/ubuntu:v1
     hostname: node1
     ports:
       - "2221:22"
     
   node2:
-    build: .
+    image: localhost/ubuntu:v1
     hostname: node2
     ports:
       - "2222:22"
+    
+  node3:
+    image: localhost/rocky:v1
+    hostname: node3
+    ports:
+      - "2223:22"

@@ -1,0 +1,23 @@
+FROM rockylinux:10
+
+RUN dnf -y install openssh-server openssh-clients sudo python3 passwd && \
+    dnf clean all
+
+RUN useradd -m -s /bin/bash ansible && \
+    echo 'ansible ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+RUN ssh-keygen -A
+
+RUN mkdir -p /run/sshd && chmod 0755 /run/sshd
+
+# Configuração do sshd com PAM DESABILITADO
+RUN echo "PasswordAuthentication yes" > /etc/ssh/sshd_config.d/99-ansible-lab.conf && \
+    echo "PermitRootLogin no" >> /etc/ssh/sshd_config.d/99-ansible-lab.conf && \
+    echo "UsePAM no" >> /etc/ssh/sshd_config.d/99-ansible-lab.conf
+
+# Define a senha
+RUN echo 'ansible:ansible@123!' | chpasswd
+
+EXPOSE 22
+
+CMD ["/usr/sbin/sshd", "-D"]

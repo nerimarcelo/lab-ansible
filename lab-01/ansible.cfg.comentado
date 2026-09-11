@@ -1,0 +1,13 @@
+[defaults]
+inventory = inventory.ini
+host_key_checking = False  # Desativa a verficacao da chave SSH do host, vai aceitar qualquer chave sem perguntar
+retry_files_enabled = False
+sudo_flags = -H -S -n 
+# Quando become: yes passa parametros adicionais 
+# -H define o $HOME do user alvo, se usar root e tiver variaveis no .bashrc, vai carregar elas.
+# -S le a senha do STDIN
+# -n e o non-interactive, nao pede senha, evita que sudo fique esperando senha, usar com o -S
+
+[ssh_connection]
+ssh_args = -o ControlMaster=auto -o ControlPersist=60s # ControlMaster vai reutilizar conexoes SSH existentes, bom pra reduzir tempo de execucao, ControlPersist manter uma conexao aberta por 60s apos a ultima tarefa
+pipelining = True # Envia varios comandos em uma unica conexao SSH, o True permite enviar comandos com sudo sem criar arquivos temporarios

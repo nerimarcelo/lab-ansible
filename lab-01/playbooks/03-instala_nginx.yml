@@ -1,0 +1,50 @@
+---
+- name: Instala o NGINX
+  hosts: lab
+  become: true
+  gather_facts: true
+
+  tasks:
+    # Atualiza cache de repositório (apt para Ubuntu, dnf para Rocky)
+    - name: Atualiza repo Ubuntu
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_facts.distribution == "Ubuntu"
+
+    - name: Atualiza repo Rocky
+      ansible.builtin.dnf:
+        update_cache: true
+      when: ansible_facts.distribution == "Rocky"
+
+    # Instala o pacote nginx usando o gerenciador de cada distro
+    - name: Instala NGINX no Ubuntu
+      ansible.builtin.apt:
+        name: nginx
+        state: absent
+      when: ansible_facts.distribution == "Ubuntu"
+
+    - name: Instala NGINX no Rocky
+      ansible.builtin.dnf:
+        name: nginx
+        state: present
+      when: ansible_facts.distribution == "Rocky"
+
+    # Cria o diretório do site (owner www-data no Ubuntu, nginx no Rocky)
+    - name: Cria diretorio do site (Ubuntu)
+      ansible.builtin.file:
+        path: /var/www/lab
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: "0755"
+      when: ansible_facts.distribution == "Ubuntu"
+
+    - name: Cria diretorio do site (Rocky)
+      ansible.builtin.file:
+        path: /var/www/lab
+        state: directory
+        owner: nginx
+        group: nginx
+        mode: "0755"
+      when: ansible_facts.distribution == "Rocky"

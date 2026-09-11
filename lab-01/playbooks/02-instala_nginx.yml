@@ -2,18 +2,32 @@
 - name: Instala o NGINX
   hosts: lab
   become: true  # Become serve pra virar root
-  gather_facts: true  # Coleta fatos do sistema, padrao
+  gather_facts: true  # Coleta informacoes do sistema
 
   tasks:
-    - name: Atualiza repo  # Faz um apt update
+    - name: Atualiza repo Ubuntu
       ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
+      when: ansible_facts.distribution == "Ubuntu"
+    
+    - name: Atualiza RHEL
+      ansible.builtin.dnf:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_facts.distribution == "Rocky"
 
     - name: Instala pacote NGINX
       ansible.builtin.apt:
         name: nginx
         state: present
+      when: ansible_facts.distribution == "Ubuntu"
+
+    - name: Instala pacote NGINX RHEL
+      ansible.builtin.dnf:
+        name: nginx
+        state: present
+      when: ansible_facts.distribution == "Rocky"
 
     - name: Cria diretorio NGINX
       ansible.builtin.file:
@@ -22,4 +36,6 @@
         owner: www-data
         group: www-data
         mode: 0755
+    
+    
 

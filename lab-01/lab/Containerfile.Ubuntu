@@ -1,0 +1,26 @@
+FROM ubuntu:24.04
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openssh-server sudo python3 && \
+    useradd -m -s /bin/bash ansible && \
+    echo 'ansible ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
+    mkdir -p /var/run/sshd
+
+# Configura autenticação por chave SSH
+RUN mkdir -p /home/ansible/.ssh && \
+    chmod 700 /home/ansible/.ssh
+
+# Copia a chave pública (precisa estar no contexto do build)
+COPY keys/id_rsa.pub /home/ansible/.ssh/authorized_keys
+
+RUN chown -R ansible:ansible /home/ansible/.ssh && \
+    chmod 600 /home/ansible/.ssh/authorized_keys
+
+# Configuração do sshd
+RUN echo "PubkeyAuthentication yes" > /etc/ssh/sshd_config.d/99-ansible-lab.conf && \
+    echo "PasswordAuthentication no" >> /etc/ssh/sshd_config.d/99-ansible-lab.conf && \
+    echo "PermitRootLogin no" >> /etc/ssh/sshd_config.d/99-ansible-lab.conf
+
+EXPOSE 22
+
+CMD ["/usr/sbin/sshd", "-D"]

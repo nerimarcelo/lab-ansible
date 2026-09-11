@@ -1,0 +1,46 @@
+FROM rockylinux:10
+
+RUN dnf -y install openssh-server openssh-clients sudo python3 && \
+    dnf clean all
+
+RUN useradd -m -s /bin/bash ansible && \
+    echo 'ansible ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+RUN ssh-keygen -A
+
+RUN mkdir -p /run/sshd && chmod 0755 /run/sshd
+
+# Autenticação por chave
+RUN mkdir -p /home/ansible/.ssh && chmod 700 /home/ansible/.ssh
+COPY keys/id_rsa.pub /home/ansible/.ssh/authorized_keys
+COPY keys/id_rsa /home/ansible/.ssh/id_rsa
+RUN chown -R ansible:ansible /home/ansible/.ssh && \
+    chmod 600 /home/ansible/.ssh/authorized_keys && \
+    chmod 600 /home/ansible/.ssh/id_rsa
+
+# Configuração do sshd
+RUN echo "PubkeyAuthentication yes" > /etc/ssh/sshd_config.d/99-ansible-lab.conf && \
+    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config.d/99-ansible-lab.conf && \
+    echo "PermitRootLogin yes" >> /etc/ssh/sshd_config.d/99-ansible-lab.conf
+
+# FIX CRÍTICO: remove módulos PAM que falham em container
+# pam_selinux.so -> requer SELinux ativo no kernel do host
+# pam_loginuid.so -> tenta escrever em /proc/self/loginuid (Operation not permitted)
+# pam_namespace.so -> requer mount namespaces do kernel
+# pam_sepermit.so -> depende de SELinux
+RUN sed -i '/pam_selinux.so/d' /etc/pam.d/sshd && \
+    sed -i '/pam_loginuid.so/d' /etc/pam.d/sshd && \
+    sed -i '/pam_namespace.so/d' /etc/pam.d/sshd && \
+    sed -i '/pam_sepermit.so/d' /etc/pam.d/sshd
+
+# FIX RAIZ: pam_unix.so no stack account chama unix_chkpwd que falha em container
+# com PAM_AUTHINFO_UNAVAIL (codigo 9). Log do sshd -ddd confirmou:
+#   "PAM: do_pam_account pam_acct_mgmt = 9 (Authentication service cannot retrieve authentication info)"
+#   "Access denied for user ansible by PAM account configuration"
+# Substitui pam_unix.so (required) por pam_permit.so (sufficient) apenas no account stack
+RUN sed -i 's/^account.*required.*pam_unix.so.*/account    sufficient  pam_permit.so/' \
+    /etc/pam.d/password-auth /etc/pam.d/system-auth
+
+EXPOSE 22
+
+CMD ["/usr/sbin/sshd", "-D"]
